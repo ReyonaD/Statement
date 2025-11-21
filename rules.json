@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Shopify Income",
+    "contains": ["shopify"],
+    "type": "income"
+  },
+  {
+    "name": "Shop Pay / Affirm Income",
+    "contains": ["shoppay", "afrm"],
+    "type": "income"
+  },
+  {
+    "name": "Zelle to JASA Apparel",
+    "contains": ["zelle payment to jasa"],
+    "type": "expense"
+  },
+  {
+    "name": "Zelle Expense",
+    "contains": ["zelle"],
+    "type": "expense"
+  },
+  {
+    "name": "AMEX Payment",
+    "contains": ["american express"],
+    "type": "expense"
+  },
+  {
+    "name": "Capital One Payment",
+    "contains": ["capital one"],
+    "type": "expense"
+  },
+  {
+    "name": "DTF Printer USA LLC Transfer",
+    "contains": ["dtf printer usa"],
+    "type": "expense"
+  },
+  {
+    "name": "Wire Transfer",
+    "contains": ["wire"],
+    "type": "expense"
+  },
+  {
+    "name": "Bank Fee",
+    "contains": ["fee", "transfer fee"],
+    "type": "expense"
+  }
+]

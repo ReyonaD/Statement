@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Statement Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>💰 Bank Statement Analyzer</h1>
+            <button class="btn-reload" onclick="reloadData()">🔄 Reload Data</button>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards" id="summaryCards">
+            <div class="card">
+                <div class="card-label">Total Income</div>
+                <div class="card-value income" id="totalIncome">$0.00</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Total Expense</div>
+                <div class="card-value expense" id="totalExpense">$0.00</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Net</div>
+                <div class="card-value" id="net">$0.00</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Transactions</div>
+                <div class="card-value" id="totalTransactions">0</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">Overview</button>
+            <button class="tab" onclick="showTab('categories')">Categories</button>
+            <button class="tab" onclick="showTab('transactions')">Transactions</button>
+            <button class="tab" onclick="showTab('monthly')">Monthly</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overviewTab" class="tab-content active">
+            <div class="section">
+                <h2>Categories Summary</h2>
+                <div class="category-grid" id="categoryGrid"></div>
+            </div>
+
+            <div class="section">
+                <h2>Monthly Trend</h2>
+                <div class="chart-container" id="monthlyChart"></div>
+            </div>
+        </div>
+
+        <!-- Categories Tab -->
+        <div id="categoriesTab" class="tab-content">
+            <div class="section">
+                <h2>Category Details</h2>
+                <div class="category-list" id="categoryList"></div>
+            </div>
+        </div>
+
+        <!-- Transactions Tab -->
+        <div id="transactionsTab" class="tab-content">
+            <div class="section">
+                <h2>Transaction List</h2>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Category:</label>
+                        <select id="filterCategory" onchange="filterTransactions()">
+                            <option value="all">All Categories</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Month:</label>
+                        <select id="filterMonth" onchange="filterTransactions()">
+                            <option value="all">All Months</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Type:</label>
+                        <select id="filterType" onchange="filterTransactions()">
+                            <option value="all">All</option>
+                            <option value="income">Income Only</option>
+                            <option value="expense">Expense Only</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Search:</label>
+                        <input type="text" id="filterSearch" placeholder="Search description..." onkeyup="filterTransactions()">
+                    </div>
+                </div>
+
+                <!-- Transaction Table -->
+                <div class="transaction-count" id="transactionCount"></div>
+                <div class="table-container">
+                    <table class="transaction-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+
+        <!-- Monthly Tab -->
+        <div id="monthlyTab" class="tab-content">
+            <div class="section">
+                <h2>Monthly Analysis</h2>
+                <div class="monthly-grid" id="monthlyGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
