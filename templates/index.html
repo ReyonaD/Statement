@@ -14,6 +14,14 @@
             <button class="btn-reload" onclick="reloadData()">🔄 Reload Data</button>
         </header>
 
+        <!-- Source File Filter -->
+        <div class="source-filter-container">
+            <label for="sourceFileFilter">View by Bank Account:</label>
+            <select id="sourceFileFilter" onchange="filterBySourceFile()">
+                <option value="all">All Accounts (Combined)</option>
+            </select>
+        </div>
+
         <!-- Summary Cards -->
         <div class="summary-cards" id="summaryCards">
             <div class="card">
@@ -40,6 +48,7 @@
             <button class="tab" onclick="showTab('categories')">Categories</button>
             <button class="tab" onclick="showTab('transactions')">Transactions</button>
             <button class="tab" onclick="showTab('monthly')">Monthly</button>
+            <button class="tab" onclick="showTab('files')">📂 Files</button>
         </div>
 
         <!-- Overview Tab -->
@@ -70,6 +79,13 @@
 
                 <!-- Filters -->
                 <div class="filters">
+                    <div class="filter-group">
+                        <label>Bank Account:</label>
+                        <select id="filterSourceFile" onchange="filterTransactions()">
+                            <option value="all">All Accounts</option>
+                        </select>
+                    </div>
+
                     <div class="filter-group">
                         <label>Category:</label>
                         <select id="filterCategory" onchange="filterTransactions()">
@@ -127,6 +143,45 @@
             <div class="section">
                 <h2>Monthly Analysis</h2>
                 <div class="monthly-grid" id="monthlyGrid"></div>
+            </div>
+        </div>
+
+        <!-- Files Tab -->
+        <div id="filesTab" class="tab-content">
+            <div class="section">
+                <h2>Upload Statement Files</h2>
+
+                <!-- Upload Area -->
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">
+                        <p><strong>Drag & Drop</strong> your CSV or TXT files here</p>
+                        <p>or</p>
+                        <button class="btn-browse" onclick="document.getElementById('fileInput').click()">
+                            Browse Files
+                        </button>
+                    </div>
+                    <input type="file" id="fileInput" accept=".csv,.txt" multiple style="display: none;" onchange="handleFileSelect(event)">
+                    <p class="upload-hint">Supported: CSV, TXT files (max 16MB each)</p>
+                </div>
+
+                <!-- Upload Progress -->
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="uploadStatus">Uploading...</p>
+                </div>
+
+                <!-- Upload Results -->
+                <div id="uploadResults" class="upload-results"></div>
+            </div>
+
+            <div class="section">
+                <h2>Uploaded Files</h2>
+                <div class="file-list" id="fileList">
+                    <p class="loading">Loading files...</p>
+                </div>
             </div>
         </div>
     </div>

@@ -10,8 +10,13 @@
     "type": "income"
   },
   {
+    "name": "Etsy Income",
+    "contains": ["etsy"],
+    "type": "income"
+  },
+  {
     "name": "Zelle to JASA Apparel",
-    "contains": ["zelle payment to jasa"],
+    "contains": ["zelle payment to jasa", "mobile transfer to chk", "jasa apparel llc"],
     "type": "expense"
   },
   {

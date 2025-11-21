@@ -30,6 +30,25 @@ That's it! 🎉
 
 ## What You'll See
 
+### 📂 New! File Upload Tab
+
+**No more manual file copying!**
+
+1. Click the **📂 Files** tab
+2. **Drag & drop** your CSV files directly
+3. Or click **"Browse Files"** to select
+4. Watch files upload with progress bar
+5. Dashboard automatically refreshes!
+
+**Features:**
+- Drag & drop multiple files at once
+- Real-time upload progress
+- View all uploaded files
+- Delete files with one click
+- Auto-refresh after upload
+
+See [UPLOAD_GUIDE.md](UPLOAD_GUIDE.md) for details.
+
 ### Dashboard Features
 
 #### 📊 Summary Cards
