@@ -70,6 +70,10 @@ async function loadSummary() {
         summaryData = data;
 
         // Update summary cards
+        document.getElementById('startingBalance').textContent = formatCurrency(data.overall.starting_balance);
+        document.getElementById('startingDate').textContent = `as of ${data.overall.start_date}`;
+        document.getElementById('endingBalance').textContent = formatCurrency(data.overall.ending_balance);
+        document.getElementById('endingDate').textContent = `as of ${data.overall.end_date}`;
         document.getElementById('totalIncome').textContent = formatCurrency(data.overall.total_income);
         document.getElementById('totalExpense').textContent = formatCurrency(data.overall.total_expense);
         document.getElementById('net').textContent = formatCurrency(data.overall.net);
@@ -283,7 +287,14 @@ async function loadTransactions() {
 
         data.transactions.forEach(txn => {
             const row = document.createElement('tr');
+
+            // Use amount sign to determine color
+            // Negative amounts = expense (red), Positive amounts = income (green)
             const isExpense = txn.amount < 0;
+
+            // Add tooltip to show source file
+            row.title = `Source: ${txn.source_file}`;
+            row.style.cursor = 'help';
 
             row.innerHTML = `
                 <td>${txn.date}</td>

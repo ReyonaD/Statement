@@ -15,6 +15,11 @@
     "type": "income"
   },
   {
+    "name": "Payoneer Payment",
+    "contains": ["payoneer"],
+    "type": "expense"
+  },
+  {
     "name": "Zelle to JASA Apparel",
     "contains": ["zelle payment to jasa", "mobile transfer to chk", "jasa apparel llc"],
     "type": "expense"
@@ -42,6 +47,11 @@
   {
     "name": "Wire Transfer",
     "contains": ["wire"],
+    "type": "expense"
+  },
+  {
+    "name": "Check Payment",
+    "contains": ["check"],
     "type": "expense"
   },
   {

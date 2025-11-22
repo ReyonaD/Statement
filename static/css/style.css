@@ -135,6 +135,12 @@ body {
     color: #ef4444;
 }
 
+.card-sublabel {
+    font-size: 0.75em;
+    color: #9ca3af;
+    margin-top: 5px;
+}
+
 /* Tabs */
 .tabs {
     background: white;

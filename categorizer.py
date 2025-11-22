@@ -53,7 +53,7 @@ def apply_categories(df: pd.DataFrame, rules_path: str) -> pd.DataFrame:
         rules_path: Path to rules.json file
 
     Returns:
-        DataFrame with added 'category' column
+        DataFrame with added 'category' and 'category_type' columns
 
     Categorization logic:
         - First matching rule wins (rule order matters)
@@ -62,18 +62,19 @@ def apply_categories(df: pd.DataFrame, rules_path: str) -> pd.DataFrame:
     """
     rules = load_rules(rules_path)
 
-    def get_category(desc: str) -> str:
+    def get_category_and_type(desc: str) -> tuple:
         """
-        Determine category for a transaction description.
+        Determine category and type for a transaction description.
 
         Args:
             desc: Transaction description
 
         Returns:
-            Category name
+            Tuple of (category_name, category_type)
         """
         if pd.isna(desc) or desc == "":
-            return "Other"
+            # Default uncategorized to expense (most transactions are expenses)
+            return ("Other", "expense")
 
         desc_lower = desc.lower()
 
@@ -81,14 +82,16 @@ def apply_categories(df: pd.DataFrame, rules_path: str) -> pd.DataFrame:
         for rule in rules:
             for keyword in rule["contains"]:
                 if keyword.lower() in desc_lower:
-                    return rule["name"]
+                    return (rule["name"], rule.get("type", "expense"))
 
-        # No match found
-        return "Other"
+        # No match found - default to expense
+        return ("Other", "expense")
 
     # Apply categorization
     df = df.copy()
-    df["category"] = df["description"].astype(str).apply(get_category)
+    df[["category", "category_type"]] = df["description"].astype(str).apply(
+        lambda x: pd.Series(get_category_and_type(x))
+    )
 
     return df
 

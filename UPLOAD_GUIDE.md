@@ -25,18 +25,48 @@ No need to manually copy files! Upload your bank statements directly through the
 
 ## Supported Files
 
-✅ **CSV files** (.csv)
-✅ **TXT files** (.txt)
+✅ **CSV files** (.csv) - Bank statements (checking/savings)
+✅ **TXT files** (.txt) - Credit card statements
 📦 **Max size**: 16MB per file
 🔢 **Multiple files**: Upload many at once
 
-## File Format
+## File Formats
 
-Your files should have this format:
+### Format 1: CSV - Bank Statements
+
+For checking/savings accounts:
 ```
 Date,Description,Amount,Running Balance
 01/08/2025,SHOPIFY PAYMENTS,"2,408.66","52,408.66"
+01/09/2025,Zelle to JASA Apparel,"-1,200.00","51,208.66"
 ```
+
+**Columns:**
+- Date: MM/DD/YYYY
+- Description: Transaction description
+- Amount: Positive = income, Negative = expense
+- Running Balance: Account balance
+
+### Format 2: TXT - Credit Card Statements
+
+For credit cards:
+```
+CardHolder Name    Account#    Posting Date    Trans. Date    Reference ID    Description    Amount    Transaction Type
+JOHN DOE          1234        09/04/2025      09/02/2025     12345678901     AMAZON.COM     28.38     D
+JOHN DOE          1234        09/10/2025      09/08/2025     98765432109     Payment        -500.00   C
+```
+
+**Key Columns:**
+- Posting Date: When transaction posted (MM/DD/YYYY)
+- Description: Merchant name
+- Amount: Transaction amount
+- Transaction Type: `D` = Charge, `C` = Payment/Refund
+
+**How it works:**
+- Parser automatically detects format by looking for "Posting Date" header
+- `D` transactions = charges (shown as positive expenses)
+- `C` transactions = payments/refunds (shown as negative)
+- No running balance for credit cards
 
 ## Features
 

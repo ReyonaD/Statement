@@ -40,7 +40,7 @@ def load_data():
         # Check if empty
         if df.empty:
             print("No transaction data found. Upload some files to get started!")
-            data['transactions'] = pd.DataFrame(columns=['date', 'description', 'amount', 'running_balance', 'source_file', 'category', 'month', 'year'])
+            data['transactions'] = pd.DataFrame(columns=['date', 'description', 'amount', 'running_balance', 'source_file', 'category', 'category_type', 'month', 'year'])
             data['last_loaded'] = datetime.now()
             data['rules'] = load_rules('./rules.json')
             return True
@@ -112,13 +112,60 @@ def api_summary():
 
     # Overall stats
     total_transactions = len(df)
+
+    # Use amount sign to determine income vs expense
+    # Positive amounts = income (money coming in)
+    # Negative amounts = expense (money going out)
     total_income = df[df['amount'] > 0]['amount'].sum()
     total_expense = df[df['amount'] < 0]['amount'].sum()
     net = total_income + total_expense
 
     # Date range
-    date_min = df['date'].min().strftime('%Y-%m-%d')
-    date_max = df['date'].max().strftime('%Y-%m-%d')
+    date_min = df['date'].min()
+    date_max = df['date'].max()
+
+    # Starting and ending balances
+    # When combining multiple accounts, we need to sum balances from each account
+    starting_balance = 0.0
+    ending_balance = 0.0
+
+    # Group by source file to calculate balances per account
+    for source_file in df['source_file'].unique():
+        account_df = df[df['source_file'] == source_file].sort_values('date')
+
+        # Get starting balance for this account
+        # First, check if there's a "beginning balance" transaction (amount is NaN)
+        beginning_bal_txn = account_df[
+            (account_df['description'].str.contains('beginning balance', case=False, na=False)) &
+            (pd.isna(account_df['amount']))
+        ]
+
+        if len(beginning_bal_txn) > 0:
+            # Use the beginning balance from the special transaction
+            account_start = beginning_bal_txn.iloc[0]['running_balance']
+        elif pd.notna(account_df.iloc[0]['running_balance']):
+            # For bank statements with running balance but no beginning balance transaction
+            # Calculate from the first transaction
+            first_txn = account_df.iloc[0]
+            account_start = first_txn['running_balance'] - first_txn['amount']
+        else:
+            # For credit cards or statements without balance
+            account_start = 0.0
+
+        # Get ending balance for this account
+        # Filter out the beginning balance transaction when finding the last transaction
+        real_txns = account_df[pd.notna(account_df['amount'])]
+
+        if len(real_txns) > 0 and pd.notna(real_txns.iloc[-1]['running_balance']):
+            # For bank statements with running balance
+            # The last transaction (by date and sequence) has the ending balance
+            account_end = real_txns.iloc[-1]['running_balance']
+        else:
+            # For credit cards, calculate cumulative
+            account_end = real_txns['amount'].sum() + account_start
+
+        starting_balance += account_start
+        ending_balance += account_end
 
     # Category breakdown
     category_summary = df.groupby('category').agg({
@@ -127,16 +174,13 @@ def api_summary():
     category_summary.columns = ['category', 'total', 'count']
     category_summary = category_summary.sort_values('total', key=abs, ascending=False)
 
-    # Monthly breakdown
-    monthly = df.groupby('month').agg({
-        'amount': [
-            lambda x: x[x > 0].sum(),  # income
-            lambda x: x[x < 0].sum(),  # expense
-            'sum',  # net
-            'count'
-        ]
-    }).reset_index()
-    monthly.columns = ['month', 'income', 'expense', 'net', 'count']
+    # Monthly breakdown - use amount sign
+    monthly = df.groupby('month').apply(lambda g: pd.Series({
+        'income': g[g['amount'] > 0]['amount'].sum(),
+        'expense': g[g['amount'] < 0]['amount'].sum(),
+        'net': g['amount'].sum(),
+        'count': len(g)
+    })).reset_index()
     monthly = monthly.sort_values('month')
 
     return jsonify({
@@ -145,7 +189,11 @@ def api_summary():
             'total_income': float(total_income),
             'total_expense': float(total_expense),
             'net': float(net),
-            'date_range': f"{date_min} to {date_max}"
+            'starting_balance': float(starting_balance),
+            'ending_balance': float(ending_balance),
+            'date_range': f"{date_min.strftime('%Y-%m-%d')} to {date_max.strftime('%Y-%m-%d')}",
+            'start_date': date_min.strftime('%m/%d/%Y'),
+            'end_date': date_max.strftime('%m/%d/%Y')
         },
         'categories': category_summary.to_dict('records'),
         'monthly': monthly.to_dict('records')
@@ -180,6 +228,7 @@ def api_transactions():
     if search:
         df = df[df['description'].str.contains(search, case=False, na=False)]
 
+    # Filter by transaction type using amount sign
     if transaction_type == 'income':
         df = df[df['amount'] > 0]
     elif transaction_type == 'expense':
@@ -195,12 +244,23 @@ def api_transactions():
     # Convert to JSON-friendly format
     transactions = []
     for _, row in df.iterrows():
+        # Handle NaT dates gracefully
+        if pd.notna(row['date']):
+            date_str = row['date'].strftime('%Y-%m-%d')
+        else:
+            date_str = None
+
+        # Handle NaN amounts and balances
+        amount = float(row['amount']) if pd.notna(row['amount']) else 0.0
+        balance = float(row['running_balance']) if pd.notna(row['running_balance']) else None
+
         transactions.append({
-            'date': row['date'].strftime('%Y-%m-%d'),
+            'date': date_str,
             'description': row['description'],
-            'amount': float(row['amount']),
-            'balance': float(row['running_balance']) if pd.notna(row['running_balance']) else None,
+            'amount': amount,
+            'balance': balance,
             'category': row['category'],
+            'category_type': row['category_type'],
             'source_file': row['source_file']
         })
 
@@ -229,7 +289,10 @@ def api_months():
     if data['transactions'] is None:
         load_data()
 
-    months = sorted(data['transactions']['month'].unique().tolist(), reverse=True)
+    # Get unique months and filter out NaT (Not a Time)
+    months = data['transactions']['month'].unique()
+    months = [m for m in months if pd.notna(m)]  # Remove NaT values
+    months = sorted(months, reverse=True)
 
     return jsonify({'months': months})
 
@@ -376,16 +439,26 @@ def api_files():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/files/<filename>', methods=['DELETE'])
+@app.route('/api/files/<path:filename>', methods=['DELETE'])
 def api_delete_file(filename):
     """Delete an uploaded file."""
     try:
-        # Secure the filename
-        filename = secure_filename(filename)
+        # Build the filepath - use the filename as-is first
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+        # If file doesn't exist with original name, try secure_filename version
+        if not os.path.exists(filepath):
+            secured_name = secure_filename(filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], secured_name)
 
         if not os.path.exists(filepath):
             return jsonify({'error': 'File not found'}), 404
+
+        # Validate the filepath is within the upload folder (security check)
+        upload_folder = os.path.abspath(app.config['UPLOAD_FOLDER'])
+        file_abs_path = os.path.abspath(filepath)
+        if not file_abs_path.startswith(upload_folder):
+            return jsonify({'error': 'Invalid file path'}), 403
 
         # Delete file
         os.remove(filepath)
@@ -395,7 +468,7 @@ def api_delete_file(filename):
 
         return jsonify({
             'success': True,
-            'message': f'File {filename} deleted successfully'
+            'message': f'File {os.path.basename(filepath)} deleted successfully'
         })
 
     except Exception as e:
