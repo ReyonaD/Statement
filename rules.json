@@ -20,6 +20,11 @@
     "type": "expense"
   },
   {
+    "name": "MoneyGram Payment",
+    "contains": ["moneygram"],
+    "type": "expense"
+  },
+  {
     "name": "Zelle to JASA Apparel",
     "contains": ["zelle payment to jasa", "mobile transfer to chk", "jasa apparel llc"],
     "type": "expense"

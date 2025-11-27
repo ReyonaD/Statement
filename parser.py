@@ -271,10 +271,11 @@ def _load_credit_card_statement(file_path: Path) -> pd.DataFrame:
                         break
 
             if posting_date and description and amount:
-                # For credit cards, the amount already has the correct sign:
-                # D (debit) = positive = charge/expense (money you spent)
-                # C (credit) = negative = refund/payment (money credited back)
-                amount_float = float(amount)
+                # For credit cards, we need to INVERT the sign:
+                # Positive amount in file = charge/expense = need to make it NEGATIVE
+                # Negative amount in file = payment/refund = need to make it POSITIVE
+                # This way: negative = expense (red), positive = income (green)
+                amount_float = -float(amount)  # Invert the sign
 
                 transactions.append({
                     'date': posting_date,
