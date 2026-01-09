@@ -615,6 +615,28 @@ async function deleteFile(filename) {
     }
 }
 
+// Export to CSV
+function exportToCSV() {
+    // Get current filter values
+    const sourceFile = document.getElementById('filterSourceFile')?.value || 'all';
+    const category = document.getElementById('filterCategory')?.value || 'all';
+    const month = document.getElementById('filterMonth')?.value || 'all';
+    const search = document.getElementById('filterSearch')?.value || '';
+    const type = document.getElementById('filterType')?.value || 'all';
+
+    // Build query string with current filters
+    const params = new URLSearchParams();
+    if (sourceFile !== 'all') params.append('source_file', sourceFile);
+    if (category !== 'all') params.append('category', category);
+    if (month !== 'all') params.append('month', month);
+    if (search) params.append('search', search);
+    if (type !== 'all') params.append('type', type);
+
+    // Trigger download
+    const url = '/api/export' + (params.toString() ? '?' + params.toString() : '');
+    window.location.href = url;
+}
+
 // Utility functions
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-US', {

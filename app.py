@@ -5,7 +5,7 @@ Bank Statement Analyzer - Web Application
 Interactive visual dashboard for exploring bank transactions.
 """
 
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, Response
 import pandas as pd
 import json
 import os
@@ -131,7 +131,7 @@ def api_summary():
 
     # Group by source file to calculate balances per account
     for source_file in df['source_file'].unique():
-        account_df = df[df['source_file'] == source_file].sort_values('date')
+        account_df = df[df['source_file'] == source_file].sort_values(['date', '_seq'])
 
         # Get starting balance for this account
         # First, check if there's a "beginning balance" transaction (amount is NaN)
@@ -473,6 +473,136 @@ def api_delete_file(filename):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/export')
+def api_export():
+    """Export transactions to ZIP file with separate income and expense CSVs."""
+    import io
+    import zipfile
+
+    if data['transactions'] is None:
+        load_data()
+
+    df = data['transactions'].copy()
+
+    # Get filter parameters (same as transactions endpoint)
+    source_file = request.args.get('source_file')
+    category = request.args.get('category')
+    month = request.args.get('month')
+    search = request.args.get('search')
+    transaction_type = request.args.get('type')
+
+    # Apply filters
+    if source_file and source_file != 'all':
+        df = df[df['source_file'] == source_file]
+
+    if category and category != 'all':
+        df = df[df['category'] == category]
+
+    if month and month != 'all':
+        df = df[df['month'] == month]
+
+    if search:
+        df = df[df['description'].str.contains(search, case=False, na=False)]
+
+    if transaction_type == 'income':
+        df = df[df['amount'] > 0]
+    elif transaction_type == 'expense':
+        df = df[df['amount'] < 0]
+
+    # Filter out beginning balance rows (NaN amounts)
+    real_txns = df[pd.notna(df['amount'])]
+
+    # Split into income and expense
+    income_txns = real_txns[real_txns['amount'] > 0]
+    expense_txns = real_txns[real_txns['amount'] < 0]
+
+    # Calculate summary stats
+    total_income = income_txns['amount'].sum()
+    total_expense = expense_txns['amount'].sum()
+    net = total_income + total_expense
+
+    # Get date range
+    date_min = real_txns['date'].min()
+    date_max = real_txns['date'].max()
+
+    # Calculate starting and ending balances
+    starting_balance = 0.0
+    ending_balance = 0.0
+
+    for src_file in df['source_file'].unique():
+        account_df = df[df['source_file'] == src_file]
+
+        # Check for beginning balance transaction
+        beginning_bal_txn = account_df[
+            (account_df['description'].str.contains('beginning balance', case=False, na=False)) &
+            (pd.isna(account_df['amount']))
+        ]
+
+        if len(beginning_bal_txn) > 0:
+            starting_balance += beginning_bal_txn.iloc[0]['running_balance']
+        elif len(account_df) > 0 and pd.notna(account_df.iloc[0]['running_balance']):
+            first_txn = account_df.iloc[0]
+            starting_balance += first_txn['running_balance'] - first_txn['amount']
+
+        # Get ending balance
+        account_real_txns = account_df[pd.notna(account_df['amount'])]
+        if len(account_real_txns) > 0 and pd.notna(account_real_txns.iloc[-1]['running_balance']):
+            ending_balance += account_real_txns.iloc[-1]['running_balance']
+
+    def create_csv(txns, title, total_amount, txn_count):
+        """Helper function to create CSV content."""
+        output = io.StringIO()
+
+        # Write summary section (quote values with commas for Excel compatibility)
+        output.write(f"Bank Statement Export - {title}\n")
+        output.write("\n")
+        output.write("SUMMARY,,\n")
+        output.write(f"Starting Balance,\"${starting_balance:,.2f}\",as of {date_min.strftime('%m/%d/%Y') if pd.notna(date_min) else 'N/A'}\n")
+        output.write(f"Ending Balance,\"${ending_balance:,.2f}\",as of {date_max.strftime('%m/%d/%Y') if pd.notna(date_max) else 'N/A'}\n")
+        output.write(f"Total Income,\"${total_income:,.2f}\"\n")
+        output.write(f"Total Expense,\"${total_expense:,.2f}\"\n")
+        output.write(f"Net,\"${net:,.2f}\"\n")
+        output.write(f"Total {title} Transactions,{txn_count}\n")
+        output.write(f"Total {title} Amount,\"${total_amount:,.2f}\"\n")
+        output.write("\n")
+        output.write("TRANSACTIONS,,,,\n")
+        output.write("File,Date,Description,Category,Amount\n")
+
+        # Write transactions
+        for _, row in txns.iterrows():
+            date_str = row['date'].strftime('%Y-%m-%d') if pd.notna(row['date']) else ''
+            amount = float(row['amount']) if pd.notna(row['amount']) else 0.0
+            # Escape description for CSV (handle commas and quotes)
+            description = str(row['description']).replace('"', '""')
+            output.write(f'"{row["source_file"]}","{date_str}","{description}","{row["category"]}",{amount:.2f}\n')
+
+        csv_content = output.getvalue()
+        output.close()
+        return csv_content
+
+    # Create CSV content for both
+    income_csv = create_csv(income_txns, "Income", total_income, len(income_txns))
+    expense_csv = create_csv(expense_txns, "Expense", total_expense, len(expense_txns))
+
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    export_date = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr(f'income_{export_date}.csv', income_csv)
+        zip_file.writestr(f'expense_{export_date}.csv', expense_csv)
+
+    zip_buffer.seek(0)
+
+    filename = f"bank_statement_export_{export_date}.zip"
+
+    return Response(
+        zip_buffer.getvalue(),
+        mimetype='application/zip',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
 
 
 if __name__ == '__main__':

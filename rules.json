@@ -25,6 +25,11 @@
     "type": "expense"
   },
   {
+    "name": "Google Ads",
+    "contains": ["google ads", "google ad"],
+    "type": "expense"
+  },
+  {
     "name": "Zelle to JASA Apparel",
     "contains": ["zelle payment to jasa", "mobile transfer to chk", "jasa apparel llc"],
     "type": "expense"
